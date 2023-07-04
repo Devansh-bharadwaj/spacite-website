@@ -1,16 +1,39 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useContext, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "./PropertyPage.css";
-import image from "../media/propertyPage.png";
-import wifi from "../media/wifi_icon.png";
+import wifi_icon from "../media/wifi_icon.png";
+import printer_icon from "../media/printer_icon.svg";
+import parking_icon from "../media/parking_icon.svg";
+import explore_icon from "../media/icon/explore_arrow.png";
 import Select from "react-select";
+import Footer from "../footer/Footer";
+import SpaceExpert from "../homepage/spaceExpert/SpaceExpert";
+import { CityContext } from "../context/CityContext";
+import top_gurgaon from "../media/coworking_img/top-gurgaon.png";
+import location_icon from "../media/icon/location.png";
+import Carousel from "react-elastic-carousel";
+import axios from "axios";
+import Modal from "react-modal";
+import { RxCross2 } from "react-icons/rx";
+import { AiOutlineMail } from "react-icons/ai";
 
 const PropertyPage = ({ workSpace }) => {
+  const { breakPoints, Myarrow } = useContext(CityContext);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const openModal = () => {
+    setModalIsOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalIsOpen(false);
+  };
+
   const location = useLocation();
   let pathArray = location.pathname.split("/");
   let lastElem = pathArray[pathArray.length - 1];
   let cityName = lastElem.charAt(0).toUpperCase() + lastElem.slice(1);
-  const [selectedOption, setSelectedOption] = useState(null);
 
   const optionsOfficeType = [
     { value: "dedicated desk", label: "Dedicated Desk" },
@@ -32,6 +55,134 @@ const PropertyPage = ({ workSpace }) => {
     { value: "3-4 month", label: "3-4 Month" },
     { value: "after 4 month", label: "After 4 Month" },
   ];
+
+  const [plans, setPlans] = useState([]);
+
+  let coworkingPlans = [
+    {
+      id: 1,
+      name: "Virtual Office",
+      img: "https://spacite-bucket.s3.ap-south-1.amazonaws.com/image-1688105578710.svg",
+      description: "Book and experience the un-conventional work culture.",
+    },
+    {
+      id: 2,
+      name: "Hot Desk",
+      img: "https://spacite-bucket.s3.ap-south-1.amazonaws.com/image-1688105892652.svg",
+      description: "Dynamic workspace for versatile professionals.",
+    },
+    {
+      id: 3,
+      name: "Dedicated Desk",
+      img: "https://spacite-bucket.s3.ap-south-1.amazonaws.com/image-1688105556307.svg",
+      description: "A fixed desk in a shared coworking space.",
+    },
+    {
+      id: 4,
+      name: "Private Cabin",
+      img: "https://spacite-bucket.s3.ap-south-1.amazonaws.com/image-1688105567255.svg",
+      description: "Private office space dedicated to you and your team.",
+    },
+  ];
+
+  useEffect(() => {
+    const mainPriceCategory = workSpace.plans.map((plan, i) => ({
+      plan,
+      planImg: coworkingPlans[i].img,
+      description: coworkingPlans[i].description,
+    }));
+    setPlans([...mainPriceCategory]);
+  }, [workSpace.plans]);
+
+  console.log(plans);
+
+  const [officeType, setOfficeType] = useState("");
+  const [noSeats, setNoSeats] = useState("");
+  const [moveIn, setMoveIn] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [user, setUser] = useState({ name: "", email: "", phone: "" });
+  const [loading, setLoading] = useState(false);
+
+  const inputChangeHandler = (e) => {
+    let { name, value } = e.target;
+    setUser({ ...user, [name]: value });
+  };
+
+  const selectChangeHandlerOffice = (officeType, noSeats, moveIn) => {
+    setOfficeType(officeType?.value);
+  };
+  console.log(officeType);
+  const selectChangeHandlerSeats = (noSeats) => {
+    setNoSeats(noSeats?.value);
+  };
+  const selectChangeHandlerMove = (moveIn) => {
+    setMoveIn(moveIn?.value);
+  };
+
+  const phonePattern = /^\d{10}$/;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const validation = () => {
+    if (user.name.trim() === "") {
+      setNameError("Name is required");
+    } else {
+      setNameError("");
+    }
+
+    if (!emailPattern.test(user.email)) {
+      setEmailError("Invalid email format");
+    } else {
+      setEmailError("");
+    }
+
+    if (!phonePattern.test(user.phone)) {
+      setPhoneError("Invalid phone number");
+    } else {
+      setPhoneError("");
+    }
+  };
+
+  const sendEmail = async (e) => {
+    e.preventDefault();
+    if (
+      user.name.trim() !== "" &&
+      emailPattern.test(user.email) &&
+      phonePattern.test(user.phone)
+    ) {
+      setUser({ name: "", email: "", phone: "" });
+      setMoveIn("");
+      setNoSeats(null);
+      setOfficeType("");
+      validation();
+      setLoading(true);
+      try {
+        const response = await axios.post(
+          "http://localhost:5000/sendmail",
+          {
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            office_type: officeType,
+            no_of_seats: noSeats,
+            move_in: moveIn,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        setLoading(false);
+        navigate("/thank-you");
+      } catch (error) {
+        console.error(error);
+      }
+    } else {
+      validation();
+    }
+  };
+  console.log(workSpace);
 
   return (
     <>
@@ -59,33 +210,39 @@ const PropertyPage = ({ workSpace }) => {
         </ol>
       </nav>
       <div className="container">
-        <div className="row title_section">
+        <div className="row title_section_property">
           <div className="col-md-6">
-            <h2 className="title_heading">
+            <h1 className="title_heading_property">
               {workSpace.name.split(" ").length > 1 ? (
                 <span>
                   {workSpace.name
                     .split(" ")
                     .slice(0, workSpace.name.split(" ").length - 1)
                     .join(" ")}{" "}
-                  <span className="title_color">
+                  <span className="title_color_property">
                     {workSpace.name.split(" ").pop()}
                   </span>
                 </span>
               ) : (
                 workSpace.name
               )}
-            </h2>
-            <p>{workSpace.location?.address}, Gurugram</p>
+            </h1>
+            <p>{workSpace.location?.address}</p>
           </div>
-          <div className="col-md-3">
+          <div className="col-md-3 price_section_box">
             <p>Starting From</p>
-            <p className="price_section">
-              ₹6200/<span>Month</span>
+            <p className="price_section_property">
+              ₹
+              {
+                workSpace.plans.reduce((prev, current) => {
+                  return current.price < prev.price ? current : prev;
+                }).price
+              }
+              /*<span>Month</span>
             </p>
           </div>
         </div>
-        <div className="row">
+        <div className="row mb_30">
           <div className="col-lg-8">
             <div
               id="carouselExampleControls"
@@ -93,15 +250,18 @@ const PropertyPage = ({ workSpace }) => {
               data-bs-ride="carousel"
             >
               <div className="carousel-inner">
-                <div className="carousel-item active">
-                  <img src={image} className="d-block w-100" alt="..." />
-                </div>
-                <div className="carousel-item">
-                  <img src={image} className="d-block w-100" alt="..." />
-                </div>
-                <div className="carousel-item">
-                  <img src={image} className="d-block w-100" alt="..." />
-                </div>
+                {workSpace.images.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`carousel-item ${index === 0 ? "active" : ""}`}
+                  >
+                    <img
+                      src={image.image}
+                      className="d-block w-100"
+                      alt={`Image ${index + 1}`}
+                    />
+                  </div>
+                ))}
               </div>
               <button
                 className="carousel-control-prev"
@@ -128,182 +288,458 @@ const PropertyPage = ({ workSpace }) => {
                 <span className="visually-hidden">Next</span>
               </button>
             </div>
-            <div className="row amenity_section">
+            <div className="row amenity_section_property">
               <div className="col-md-4">
-                <img src={wifi} alt="wifi" />
-                <p className="facility_name">High Speed Wifi</p>
-                <p>
-                  High-Speed Wifi, HDTVs everything you need to do your best
-                  work.
-                </p>
+                <img className="property_icon" src={wifi_icon} alt="wifi" />
+                <div>
+                  <p className="facility_name facility_name_property">
+                    High Speed Wifi
+                  </p>
+                  <p>High-Speed Wifi for great connectivity</p>
+                </div>
               </div>
               <div className="col-md-4">
-                <img src={wifi} alt="wifi" />
-                <p className="facility_name">High Speed Wifi</p>
-                <p>
-                  High-Speed Wifi, HDTVs everything you need to do your best
-                  work.
-                </p>
+                <img
+                  className="property_icon"
+                  src={printer_icon}
+                  alt="printer"
+                />
+                <div>
+                  <p className="facility_name facility_name_property">
+                    Printer
+                  </p>
+                  <p>Printing and scanning facilities</p>
+                </div>
               </div>
               <div className="col-md-4">
-                <img src={wifi} alt="wifi" />
-                <p className="facility_name">High Speed Wifi</p>
-                <p>
-                  High-Speed Wifi, HDTVs everything you need to do your best
-                  work.
-                </p>
+                <img
+                  className="property_icon"
+                  src={parking_icon}
+                  alt="parking"
+                />
+                <div>
+                  <p className="facility_name facility_name_property">
+                    Parking
+                  </p>
+                  <p>Easy and convenient parking</p>
+                </div>
               </div>
             </div>
+            <hr className="devider_line" />
             <div className="row about_property_section">
-              <h3>About this property</h3>
-              <p>
-                Are you searching for a fully furnished working space in
-                Gurgaon? Look at one of the best collaborating spaces-10
-                Gulmohar by ideahacks, situated in Balola, Gurgaon.
-              </p>
-              <p>
-                It offers flexible day pass, hot desks and dedicated desks and a
-                common area for different business purposes. It offers advanced
-                key conveniences like business grade wifi, video conferencing,
-                cleaned floors, TV set, garden, AC, projectors, printing and fax
-                facilities etc.
-              </p>
-              <p>
-                This place suits every business model type such as it's a
-                company, specialists, finance managers, SMEs, startups and many
-                more. Furthermore, it also consists of smart meeting rooms where
-                you can examine significant interviews and business discussions.
-              </p>
-              <p>
-                Book seats for yourself as well as your group in this wonderful
-                co-working space and speed up your business process. It has
-                simple admittance to the public vehicle for day-to-day
-                commuters. Do check!
-              </p>
+              <h3 className="property_h3">About this property</h3>
+              <p>{workSpace.description}</p>
             </div>
-            <div className="row category_section">
-              <div className="col-md-6">
-                <h3>Dedicated Desk</h3>
-                <p>A fixed desk in a shared coworking space.</p>
-                <p className="facility_name">Starting From</p>
-                <p className="facility_name">
-                  <span>₹468/</span>Seat
-                </p>
+            <hr className="devider_line" />
+            {plans?.map((planElem, i) => {
+              return (
+                <div className="row category_section_property" key={i}>
+                  <div className="col-6">
+                    <h4>{planElem?.plan.category.name}</h4>
+                    <p className="mob_hide">{planElem.description}</p>
+                    <p className="facility_name">Starting From</p>
+                    <p className="facility_name">
+                      <span>₹{planElem.plan.price}/*</span>
+                      {planElem.plan.duration === "Year" ? "Year" : "Seat"}
+                    </p>
+                  </div>
+                  <div className="col-6 desk_icon_box">
+                    <img src={planElem.planImg} alt="desk" />
+                    <div className="explore_box">
+                      <p>Enquire</p>
+                      <img src={explore_icon} alt="explore" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <hr className="devider_line" />
+            <div className="row offers_section_property">
+              <h3 className="property_h3">What this Space Offers</h3>
+              {workSpace?.amenties?.map((amenity, i) => {
+                return (
+                  <div className="col-md-4 col-6 main_amenity_box" key={i}>
+                    <div className="main_amenity_icon">
+                      <img src={wifi_icon} alt="wifi" />
+                    </div>
+                    <div>
+                      <p>{amenity?.name}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="col-lg-4 mob_hide">
+            <div className="sticky_form">
+              <div className="contact_form_box_property contact_form">
+                <h4>Enquire Now</h4>
+                <form onSubmit={sendEmail}>
+                  <div className="row">
+                    <div className="col-md-12 mb-4">
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="exampleInputtext"
+                        aria-describedby="emailHelp"
+                        placeholder="Name*"
+                        value={user.name}
+                        name="name"
+                        onChange={inputChangeHandler}
+                        onBlur={validation}
+                      />
+                      {nameError && (
+                        <p className="error_validate">{nameError}</p>
+                      )}
+                    </div>
+                    <div className="col-md-12 mb-4">
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        className="form-control"
+                        id="exampleInputEmail1"
+                        aria-describedby="emailHelp"
+                        onChange={inputChangeHandler}
+                        onBlur={validation}
+                        name="email"
+                        value={user.email}
+                      />
+                      {emailError && (
+                        <p className="error_validate">{emailError}</p>
+                      )}
+                    </div>
+                    <div className="col-md-12 mb-4">
+                      <input
+                        type="text"
+                        placeholder="Phone"
+                        className="form-control"
+                        id="exampleInputEmail1"
+                        name="phone"
+                        value={user.phone}
+                        aria-describedby="emailHelp"
+                        onChange={inputChangeHandler}
+                        onBlur={validation}
+                      />
+                      {phoneError && (
+                        <p className="error_validate">{phoneError}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6 mb-4">
+                      <div className="select_option_property">
+                        <Select
+                          value={optionsOfficeType.find(
+                            (option) => option.value === officeType
+                          )}
+                          onChange={selectChangeHandlerOffice}
+                          options={optionsOfficeType}
+                          placeholder="Office Type"
+                          inputProps={{
+                            name: "Office type",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6 mb-4">
+                      <div className="select_option_property">
+                        <Select
+                          value={optionSeats.find(
+                            (option) => option.value === noSeats
+                          )}
+                          onChange={selectChangeHandlerSeats}
+                          options={optionSeats}
+                          placeholder="No. of Seats"
+                          inputProps={{
+                            name: "No. of seats",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-md-6">
+                      <div className="select_option_property">
+                        <Select
+                          defaultValue={moveIn}
+                          onChange={selectChangeHandlerMove}
+                          options={optionsMoveIn}
+                          placeholder="Move In"
+                          inputProps={{
+                            name: "Move in",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <button
+                        type="submit"
+                        className="globalBtn w-100 contact_btn"
+                      >
+                        {loading ? "sending..." : "Find your space"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
-              <div className="col-md-6"></div>
-            </div>
-            <div className="row category_section">
-              <div className="col-md-6">
-                <h3>Private Cabin</h3>
-                <p>A fixed desk in a shared coworking space.</p>
-                <p className="facility_name">Starting From</p>
-                <p className="facility_name">
-                  <span>₹468/</span>Seat
-                </p>
-              </div>
-              <div className="col-md-6"></div>
-            </div>
-            <div className="row category_section">
-              <div className="col-md-6">
-                <h3>Virtual Office</h3>
-                <p>A fixed desk in a shared coworking space.</p>
-                <p className="facility_name">Starting From</p>
-                <p className="facility_name">
-                  <span>₹468/</span>Seat
-                </p>
-              </div>
-              <div className="col-md-6"></div>
-            </div>
-            <div className="row offers_section">
-              <h3>What this Space Offers</h3>
-              <div className="row">
-                <div className="col-md-4">Wifi</div>
-                <div className="col-md-4">Comfy Workstation</div>
-                <div className="col-md-4">Meeting Rooms</div>
+              <div className="contact_form_footer">
+                <h3 className="property_h3 text-align-center">
+                  Got questions or want to talk to someone?
+                </h3>
+                <a href="tel: +919999108078">
+                  <button className="globalBtn contact_btn">
+                    +91 9999 10 8078
+                  </button>
+                </a>
               </div>
             </div>
           </div>
-          <div className="col-lg-4">
-            <div className="contact_form_box contact_form">
-              <h4>Enquire Now</h4>
-              <form>
-                <div className="row">
-                  <div className="col-md-12 mb-4">
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="exampleInputtext"
-                      aria-describedby="emailHelp"
-                      placeholder="Name"
-                    />
-                  </div>
-                  <div className="col-md-12 mb-4">
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      className="form-control"
-                      id="exampleInputEmail1"
-                      aria-describedby="emailHelp"
-                    />
-                  </div>
-                  <div className="col-md-12 mb-4">
-                    <input
-                      type="text"
-                      placeholder="Phone"
-                      className="form-control"
-                      id="exampleInputEmail1"
-                      aria-describedby="emailHelp"
-                    />
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6 mb-4">
-                    <div className="select_option">
-                      <Select
-                        defaultValue={selectedOption}
-                        onChange={setSelectedOption}
-                        options={optionsOfficeType}
-                        placeholder="Office Type"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-6 mb-4">
-                    <div className="select_option">
-                      <Select
-                        defaultValue={selectedOption}
-                        onChange={setSelectedOption}
-                        options={optionSeats}
-                        placeholder="No. of Seats"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6">
-                    <div className="select_option">
-                      <Select
-                        defaultValue={selectedOption}
-                        onChange={setSelectedOption}
-                        options={optionsMoveIn}
-                        placeholder="Move In"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <button
-                      type="submit"
-                      className="globalBtn w-100 contact_btn"
-                    >
-                      Find your space
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
+          <hr className="devider_line mob_hide" />
         </div>
       </div>
-      ;
+      <div className="desk_hide">
+        <SpaceExpert />
+      </div>
+      <div className="container">
+        <h2 className="text_left">
+          Similar
+          <span className="city_span"> Spaces</span>
+        </h2>
+        <div className="top_space_row">
+          <Carousel breakPoints={breakPoints} renderArrow={Myarrow}>
+            <div className="property-card">
+              <div className="property_img">
+                <img src={top_gurgaon} alt="" className="propery_card_img" />
+              </div>
+              <div className="card-body space_card">
+                <p className="card-title">Accesswork Sohna Road</p>
+                <div className="location_box">
+                  <img src={location_icon} alt="location-icon" />
+                  <p>JMD Megapolis, Gurgaon</p>
+                </div>
+                <div className="price_box">
+                  <p className="price">
+                    ₹9,000/*<span>month</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="property-card">
+              <div className="property_img">
+                <img src={top_gurgaon} alt="" className="propery_card_img" />
+              </div>
+              <div className="card-body space_card">
+                <p className="card-title">Accesswork Sohna Road</p>
+                <div className="location_box">
+                  <img src={location_icon} alt="location-icon" />
+                  <p>JMD Megapolis, Gurgaon</p>
+                </div>
+                <div className="price_box">
+                  <p className="price">
+                    ₹9,000/*<span>month</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="property-card">
+              <div className="property_img">
+                <img src={top_gurgaon} alt="" className="propery_card_img" />
+              </div>
+              <div className="card-body space_card">
+                <p className="card-title">Accesswork Sohna Road</p>
+                <div className="location_box">
+                  <img src={location_icon} alt="location-icon" />
+                  <p>JMD Megapolis, Gurgaon</p>
+                </div>
+                <div className="price_box">
+                  <p className="price">
+                    ₹9,000/*<span>month</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="property-card">
+              <div className="property_img">
+                <img src={top_gurgaon} alt="" className="propery_card_img" />
+              </div>
+              <div className="card-body space_card">
+                <p className="card-title">Accesswork Sohna Road</p>
+                <div className="location_box">
+                  <img src={location_icon} alt="location-icon" />
+                  <p>JMD Megapolis, Gurgaon</p>
+                </div>
+                <div className="price_box">
+                  <p className="price">
+                    ₹9,000/*<span>month</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="property-card">
+              <div className="property_img">
+                <img src={top_gurgaon} alt="" className="propery_card_img" />
+              </div>
+              <div className="card-body space_card">
+                <p className="card-title">Accesswork Sohna Road</p>
+                <div className="location_box">
+                  <img src={location_icon} alt="location-icon" />
+                  <p>JMD Megapolis, Gurgaon</p>
+                </div>
+                <div className="price_box">
+                  <p className="price">
+                    ₹9,000/*<span>month</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Carousel>
+        </div>
+      </div>
+      <div className="footer_mob">
+        <Footer />
+      </div>
+      <div className="desk_hide fixed_div">
+        <div className="starting_price">
+          <p>Starting from</p>
+          <p>
+            ₹
+            {
+              workSpace.plans.reduce((prev, current) => {
+                return current.price < prev.price ? current : prev;
+              }).price
+            }
+            /*<span>Month</span>
+          </p>
+        </div>
+        <button
+          onClick={openModal}
+          className="fix_btn globalBtn"
+          style={{ width: "110px" }}
+        >
+          Enquire
+        </button>
+
+        <Modal
+          isOpen={modalIsOpen}
+          onRequestClose={() => setModalIsOpen(false)}
+          contentLabel="Example Modal"
+        >
+          <div className="close_icon_box">
+            <button>
+              <RxCross2 className="close_icon" onClick={closeModal} />
+            </button>
+          </div>
+
+          <form onSubmit={sendEmail}>
+            <div className="row">
+              <div className="col-md-12 mb-4">
+                <input
+                  type="text"
+                  className="form-control"
+                  id="exampleInputtext"
+                  aria-describedby="emailHelp"
+                  placeholder="Name*"
+                  value={user.name}
+                  name="name"
+                  onChange={inputChangeHandler}
+                  onBlur={validation}
+                />
+                {nameError && <p className="error_validate">{nameError}</p>}
+              </div>
+              <div className="col-md-12 mb-4">
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="form-control"
+                  id="exampleInputEmail1"
+                  aria-describedby="emailHelp"
+                  onChange={inputChangeHandler}
+                  onBlur={validation}
+                  name="email"
+                  value={user.email}
+                />
+                {emailError && <p className="error_validate">{emailError}</p>}
+              </div>
+              <div className="col-md-12 mb-4">
+                <input
+                  type="text"
+                  placeholder="Phone"
+                  className="form-control"
+                  id="exampleInputEmail1"
+                  name="phone"
+                  value={user.phone}
+                  aria-describedby="emailHelp"
+                  onChange={inputChangeHandler}
+                  onBlur={validation}
+                />
+                {phoneError && <p className="error_validate">{phoneError}</p>}
+              </div>
+            </div>
+            <div className="row">
+              <div className="col-md-6 mb-4">
+                <div className="select_option_property">
+                  <Select
+                    value={optionsOfficeType.find(
+                      (option) => option.value === officeType
+                    )}
+                    onChange={selectChangeHandlerOffice}
+                    options={optionsOfficeType}
+                    placeholder="Office Type"
+                    inputProps={{
+                      name: "Office type",
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="col-md-6 mb-4">
+                <div className="select_option_property">
+                  <Select
+                    value={optionSeats.find(
+                      (option) => option.value === noSeats
+                    )}
+                    onChange={selectChangeHandlerSeats}
+                    options={optionSeats}
+                    placeholder="No. of Seats"
+                    inputProps={{
+                      name: "No. of seats",
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="row">
+              <div className="col-6">
+                <div className="select_option_property">
+                  <Select
+                    defaultValue={moveIn}
+                    onChange={selectChangeHandlerMove}
+                    options={optionsMoveIn}
+                    placeholder="Move In"
+                    inputProps={{
+                      name: "Move in",
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="col-6">
+                <button
+                  type="submit"
+                  className="globalBtn w-100 contact_btn"
+                  data-bs-dismiss={
+                    user.name.trim() !== "" &&
+                    emailPattern.test(user.email) &&
+                    phonePattern.test(user.phone) &&
+                    loading &&
+                    "modal"
+                  }
+                >
+                  {loading ? "sending..." : "Find your space"}
+                </button>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      </div>
     </>
   );
 };

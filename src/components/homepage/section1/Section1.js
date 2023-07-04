@@ -30,12 +30,7 @@ function Section1() {
 
   return (
     <>
-      <section
-        className="main_banner"
-        style={{
-          backgroundImage: `url(${main_banner})`,
-        }}
-      >
+      <section className="main_banner main_banner_section1">
         <div className="container">
           <div className="row">
             <div className="col-lg-12">
@@ -61,8 +56,8 @@ function Section1() {
                             to={`/coworking-space/${elem.city.name.toLowerCase()}`}
                           >
                             <div className="city_item">
-                              <img src={elem.cityImg} alt={elem.city.name} />
-                              <p>{elem.city.name}</p>
+                              <img src={elem?.cityImg} alt={elem.city.name} />
+                              <p>{elem?.city.name}</p>
                             </div>
                           </NavLink>
                         </div>
